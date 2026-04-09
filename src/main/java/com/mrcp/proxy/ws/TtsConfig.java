@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class TtsConfig {
 
+    private String ttsHandler = "indextts";
+
     private String ttsUrl;
 
     private boolean ttsAudioSaveEnabled = false;

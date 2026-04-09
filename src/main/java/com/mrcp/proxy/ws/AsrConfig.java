@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class AsrConfig {
 
+    private String asrHandler = "funasr";
+
     private String asrUrl;
 
     private boolean asrAudioSaveEnabled = false;

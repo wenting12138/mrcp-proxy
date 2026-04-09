@@ -6,8 +6,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mrcp.proxy.handler.AsrHandler;
 import com.mrcp.proxy.handler.TTSHandler;
-import com.mrcp.proxy.handler.asr.FunasrHandler;
-import com.mrcp.proxy.handler.tts.IndexTTSHandler;
+import com.mrcp.proxy.handler.asr.AsrHandlerFactory;
+import com.mrcp.proxy.handler.tts.TtsHandlerFactory;
 import com.mrcp.proxy.utils.NetworkUtil;
 import com.mrcp.proxy.utils.ThreadPoolCreator;
 import com.mrcp.proxy.utils.UriUtil;
@@ -65,9 +65,9 @@ public class NettyServer {
     @Autowired
     private NettyConfig config;
     @Autowired
-    private TtsConfig ttsConfig;
+    private AsrHandlerFactory asrHandlerFactory;
     @Autowired
-    private AsrConfig asrConfig;
+    private TtsHandlerFactory ttsHandlerFactory;
     private ServerBootstrap bootstrap;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -354,7 +354,7 @@ public class NettyServer {
         if ("SpeechSynthesizer".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
-                    TTSHandler ttsHandler = new IndexTTSHandler(ctx.channel(), ttsConfig);
+                    TTSHandler ttsHandler = ttsHandlerFactory.create(ctx.channel());
                     ttsHandler.onServerText(body);
                 } catch (Exception e) {
                     log.error("tts handle error: {}", e);
@@ -402,7 +402,7 @@ public class NettyServer {
                     String sessionId = body.getJSONObject("context").getString("session_id");
                     if ("StartTranscription".equalsIgnoreCase(name)) {
                         ctx.channel().attr(ASR_SESSION_ID).set(sessionId);
-                        AsrHandler asrHandler = new FunasrHandler(ctx.channel(), asrConfig);
+                        AsrHandler asrHandler = asrHandlerFactory.create(ctx.channel());
                         asrHandler.onServerText(body);
                         AsrHandlerManager.put(sessionId, asrHandler);
                     } else {
