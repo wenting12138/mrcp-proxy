@@ -2,19 +2,15 @@ package com.mrcp.proxy.handler.tts;
 
 import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.AbstractTTSHandler;
-import com.mrcp.proxy.ws.NettyConfig;
+import com.mrcp.proxy.ws.TtsConfig;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class IndexTTSHandler extends AbstractTTSHandler {
 
-    public IndexTTSHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
-        super(serverChannel, url, audioSaveEnabled, audioSaveDir);
-    }
-
-    public IndexTTSHandler(Channel serverChannel, NettyConfig config) {
-        super(serverChannel, config.getTtsUrl(), config.isTtsAudioSaveEnabled(), config.getTtsAudioSaveDir());
+    public IndexTTSHandler(Channel serverChannel, TtsConfig config) {
+        super(serverChannel, config);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.status.TtsEvent;
 import com.mrcp.proxy.handler.status.TtsStateMachine;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
+import com.mrcp.proxy.ws.TtsConfig;
 import com.mrcp.proxy.ws.client.ClientCallBack;
 import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.buffer.ByteBuf;
@@ -35,11 +36,11 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
     private FileOutputStream audioOutputStream;
     private String audioFilePath;
 
-    public AbstractTTSHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
+    public AbstractTTSHandler(Channel serverChannel, TtsConfig config) {
         this.serverChannel = serverChannel;
-        this.url = url;
-        this.audioSaveEnabled = audioSaveEnabled;
-        this.audioSaveDir = audioSaveDir;
+        this.url = config.getTtsUrl();
+        this.audioSaveEnabled = config.isTtsAudioSaveEnabled();
+        this.audioSaveDir = config.getTtsAudioSaveDir();
     }
 
     @Override

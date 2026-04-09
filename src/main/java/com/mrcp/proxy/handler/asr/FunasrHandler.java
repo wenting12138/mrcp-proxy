@@ -2,14 +2,15 @@ package com.mrcp.proxy.handler.asr;
 
 import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.AbstractAsrHandler;
+import com.mrcp.proxy.ws.AsrConfig;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class FunasrHandler extends AbstractAsrHandler {
 
-    public FunasrHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
-        super(serverChannel, url, audioSaveEnabled, audioSaveDir);
+    public FunasrHandler(Channel serverChannel, AsrConfig config) {
+        super(serverChannel, config);
     }
 
     @Override

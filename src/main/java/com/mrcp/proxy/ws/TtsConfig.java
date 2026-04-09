@@ -4,13 +4,15 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-@ConfigurationProperties(prefix = "ws")
+@ConfigurationProperties(prefix = "tts")
 @Configuration
 @Data
-public class NettyConfig {
+public class TtsConfig {
 
-    private Integer port;
+    private String ttsUrl;
 
-    private String wsPath;
+    private boolean ttsAudioSaveEnabled = false;
+
+    private String ttsAudioSaveDir = "audio/tts";
 
 }

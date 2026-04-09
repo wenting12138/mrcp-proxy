@@ -178,7 +178,7 @@ public class MrcpTTSMessage {
         header.put("name", "TaskFailed");
         header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
         header.put("message_id", UUID.fastUUID().toString());
-        header.put("status", 40000002);
+        header.put("status", 40000000);
         header.put("status_text", "GATEWAY|ERROR|" + reason);
         message.put("header", header);
         return message.toJSONString();

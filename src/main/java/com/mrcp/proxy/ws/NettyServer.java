@@ -64,6 +64,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class NettyServer {
     @Autowired
     private NettyConfig config;
+    @Autowired
+    private TtsConfig ttsConfig;
+    @Autowired
+    private AsrConfig asrConfig;
     private ServerBootstrap bootstrap;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -350,7 +354,7 @@ public class NettyServer {
         if ("SpeechSynthesizer".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
-                    TTSHandler ttsHandler = new IndexTTSHandler(ctx.channel(), config);
+                    TTSHandler ttsHandler = new IndexTTSHandler(ctx.channel(), ttsConfig);
                     ttsHandler.onServerText(body);
                 } catch (Exception e) {
                     log.error("tts handle error: {}", e);
@@ -398,8 +402,7 @@ public class NettyServer {
                     String sessionId = body.getJSONObject("context").getString("session_id");
                     if ("StartTranscription".equalsIgnoreCase(name)) {
                         ctx.channel().attr(ASR_SESSION_ID).set(sessionId);
-                        AsrHandler asrHandler = new FunasrHandler(ctx.channel(),
-                                config.getAsrUrl(), config.isAsrAudioSaveEnabled(), config.getAsrAudioSaveDir());
+                        AsrHandler asrHandler = new FunasrHandler(ctx.channel(), asrConfig);
                         asrHandler.onServerText(body);
                         AsrHandlerManager.put(sessionId, asrHandler);
                     } else {

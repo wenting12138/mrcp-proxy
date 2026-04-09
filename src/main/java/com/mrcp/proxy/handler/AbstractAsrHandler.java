@@ -5,6 +5,7 @@ import com.mrcp.proxy.handler.status.AsrEvent;
 import com.mrcp.proxy.handler.status.AsrState;
 import com.mrcp.proxy.handler.status.AsrStateMachine;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
+import com.mrcp.proxy.ws.AsrConfig;
 import com.mrcp.proxy.ws.client.ClientCallBack;
 import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.buffer.ByteBuf;
@@ -34,11 +35,11 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     private FileOutputStream audioOutputStream;
     private String audioFilePath;
 
-    public AbstractAsrHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
+    public AbstractAsrHandler(Channel serverChannel, AsrConfig config) {
         this.serverChannel = serverChannel;
-        this.url = url;
-        this.audioSaveEnabled = audioSaveEnabled;
-        this.audioSaveDir = audioSaveDir;
+        this.url = config.getAsrUrl();
+        this.audioSaveEnabled = config.isAsrAudioSaveEnabled();
+        this.audioSaveDir = config.getAsrAudioSaveDir();
     }
 
     @Override

@@ -4,13 +4,14 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-@ConfigurationProperties(prefix = "ws")
+@ConfigurationProperties(prefix = "asr")
 @Configuration
 @Data
-public class NettyConfig {
+public class AsrConfig {
 
-    private Integer port;
+    private String asrUrl;
 
-    private String wsPath;
+    private boolean asrAudioSaveEnabled = false;
 
+    private String asrAudioSaveDir = "audio/asr";
 }
