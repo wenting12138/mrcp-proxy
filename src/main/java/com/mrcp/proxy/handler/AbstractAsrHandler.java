@@ -1,11 +1,16 @@
 package com.mrcp.proxy.handler;
 
 import com.alibaba.fastjson.JSONObject;
+import com.mrcp.proxy.handler.status.AsrEvent;
+import com.mrcp.proxy.handler.status.AsrState;
+import com.mrcp.proxy.handler.status.AsrStateMachine;
+import com.mrcp.proxy.utils.MrcpTTSMessage;
 import com.mrcp.proxy.ws.client.ClientCallBack;
 import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -22,12 +27,13 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     protected final String url;
     protected JSONObject event;
     protected WebSocketClient client;
-    
+    protected final AsrStateMachine stateMachine = new AsrStateMachine();
+
     private final boolean audioSaveEnabled;
     private final String audioSaveDir;
     private FileOutputStream audioOutputStream;
     private String audioFilePath;
-    
+
     public AbstractAsrHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
         this.serverChannel = serverChannel;
         this.url = url;
@@ -38,10 +44,115 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     @Override
     public void onServerText(JSONObject event) throws Exception {
         this.event = event;
-        this.client = this.getClient();
-        initAudioFile();
+        String name = event.getJSONObject("header").getString("name");
+
+        if ("StartTranscription".equalsIgnoreCase(name)) {
+            if (!stateMachine.fire(AsrEvent.START_TRANSCRIPTION)) {
+                return;
+            }
+            try {
+                this.client = this.getClient();
+                initAudioFile();
+                client.connect();
+                String sessionId = event.getJSONObject("context").getString("session_id");
+                client.sendText(buildConnectRequest(sessionId));
+                serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildAsrStartMessage(event)));
+                stateMachine.fire(AsrEvent.CLIENT_CONNECTED);
+            } catch (Exception e) {
+                log.error("ASR启动失败", e);
+                stateMachine.fire(AsrEvent.ERROR);
+                doClose();
+                serverChannel.writeAndFlush(new TextWebSocketFrame(
+                        MrcpTTSMessage.buildTaskFailedMessage(event, e.getMessage())));
+            }
+        } else if ("StopTranscription".equalsIgnoreCase(name)) {
+            if (!stateMachine.fire(AsrEvent.STOP_TRANSCRIPTION)) {
+                return;
+            }
+            doClose();
+        }
     }
-    
+
+    @Override
+    public void onServerBinary(ByteBuf buf) {
+        if (!stateMachine.fire(AsrEvent.RECEIVE_AUDIO)) {
+            return;
+        }
+        saveAudioData(buf);
+        ByteBuf byteBuf = Unpooled.directBuffer(buf.capacity());
+        byteBuf.writeBytes(buf);
+        client.sendBinary(byteBuf);
+    }
+
+    @Override
+    public void onClientText(Channel channel, String text) {
+        if (!stateMachine.fire(AsrEvent.CLIENT_RESULT)) {
+            return;
+        }
+        AsrResult result = parseResult(text);
+        if (result == null) {
+            return;
+        }
+        if (result.isFinal) {
+            log.info("ASR识别结果: {}", result.text);
+            serverChannel.writeAndFlush(new TextWebSocketFrame(
+                    MrcpTTSMessage.buildAsrResultMessage(event, result.text)));
+        } else {
+            serverChannel.writeAndFlush(new TextWebSocketFrame(
+                    MrcpTTSMessage.buildAsrResultChangedMessage(event, result.text)));
+        }
+    }
+
+    @Override
+    public void onClientBinary(Channel channel, ByteBuf buf) {
+    }
+
+    @Override
+    public void closeClient() {
+        if (!stateMachine.fire(AsrEvent.DISCONNECT)) {
+            return;
+        }
+        doClose();
+    }
+
+    private void doClose() {
+        closeAudioFile();
+        if (client != null) {
+            client.close();
+        }
+    }
+
+    protected WebSocketClient getClient() throws Exception {
+        return new WebSocketClient("asr", new URI(url), this);
+    }
+
+    public AsrState getState() {
+        return stateMachine.getCurrentState();
+    }
+
+    /**
+     * 构建连接ASR服务后发送的首条请求报文，由子类实现。
+     */
+    protected abstract String buildConnectRequest(String sessionId);
+
+    /**
+     * 解析ASR服务返回的识别结果，由子类实现。
+     * 返回 null 表示该消息不需要处理。
+     */
+    protected abstract AsrResult parseResult(String text);
+
+    protected static class AsrResult {
+        public final String text;
+        public final boolean isFinal;
+
+        public AsrResult(String text, boolean isFinal) {
+            this.text = text;
+            this.isFinal = isFinal;
+        }
+    }
+
+    // ---- 音频保存 ----
+
     private void initAudioFile() {
         if (!audioSaveEnabled) {
             return;
@@ -63,17 +174,6 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
         }
     }
 
-    @Override
-    public void onServerBinary(ByteBuf buf) {
-//        log.info("mrcp server音频数据包 -> 转发给asr服务器");
-        saveAudioData(buf);
-        
-        ByteBuf byteBuf = Unpooled.directBuffer(buf.capacity());
-        byteBuf.writeBytes(buf);
-
-        client.sendBinary(byteBuf);
-    }
-    
     private void saveAudioData(ByteBuf buf) {
         if (audioOutputStream == null) {
             return;
@@ -87,18 +187,6 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
         }
     }
 
-    protected WebSocketClient getClient() throws Exception {
-        return new WebSocketClient("asr", new URI(url), this);
-    }
-
-    @Override
-    public void closeClient() {
-        closeAudioFile();
-        if (client != null) {
-            client.close();
-        }
-    }
-    
     private void closeAudioFile() {
         if (audioOutputStream != null) {
             try {
@@ -111,12 +199,6 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
                 audioOutputStream = null;
             }
         }
-    }
-
-    public abstract void onClientText(Channel channel, String text);
-
-    public void onClientBinary(Channel channel, ByteBuf buf) {
-
     }
 
 }

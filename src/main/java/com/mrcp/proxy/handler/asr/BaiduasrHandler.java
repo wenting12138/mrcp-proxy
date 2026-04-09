@@ -6,21 +6,16 @@ import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class FunasrHandler extends AbstractAsrHandler {
+public class BaiduasrHandler extends AbstractAsrHandler {
 
-    public FunasrHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
+    public BaiduasrHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
         super(serverChannel, url, audioSaveEnabled, audioSaveDir);
     }
 
     @Override
     protected String buildConnectRequest(String sessionId) {
         JSONObject req = new JSONObject();
-        req.put("mode", "online");
-        req.put("wav_name", sessionId);
-        req.put("is_speaking", true);
-        req.put("audio_fs", 8000);
-        req.put("wav_format", "pcm");
-        req.put("chunk_size", new int[]{5, 10, 5});
+
         return req.toJSONString();
     }
 

@@ -170,4 +170,17 @@ public class MrcpTTSMessage {
         message.put("payload", payload);
         return message.toJSONString();
     }
+
+    public static String buildTaskFailedMessage(JSONObject fromEvent, String reason) {
+        JSONObject message = new JSONObject();
+        JSONObject header = new JSONObject();
+        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("name", "TaskFailed");
+        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("message_id", UUID.fastUUID().toString());
+        header.put("status", 40000002);
+        header.put("status_text", "GATEWAY|ERROR|" + reason);
+        message.put("header", header);
+        return message.toJSONString();
+    }
 }

@@ -394,13 +394,22 @@ public class NettyServer {
         if ("SpeechTranscriber".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
+                    String name = body.getJSONObject("header").getString("name");
                     String sessionId = body.getJSONObject("context").getString("session_id");
-                    ctx.channel().attr(ASR_SESSION_ID).set(sessionId);
-                    AsrHandler asrHandler = new FunasrHandler(ctx.channel(), config);
-                    asrHandler.onServerText(body);
-                    AsrHandlerManager.put(sessionId, asrHandler);
+                    if ("StartTranscription".equalsIgnoreCase(name)) {
+                        ctx.channel().attr(ASR_SESSION_ID).set(sessionId);
+                        AsrHandler asrHandler = new FunasrHandler(ctx.channel(),
+                                config.getAsrUrl(), config.isAsrAudioSaveEnabled(), config.getAsrAudioSaveDir());
+                        asrHandler.onServerText(body);
+                        AsrHandlerManager.put(sessionId, asrHandler);
+                    } else {
+                        AsrHandler asrHandler = AsrHandlerManager.get(sessionId);
+                        if (asrHandler != null) {
+                            asrHandler.onServerText(body);
+                        }
+                    }
                 } catch (Exception e) {
-                    log.error("tts handle error: {}", e);
+                    log.error("asr handle error: {}", e);
                 }
             });
         }

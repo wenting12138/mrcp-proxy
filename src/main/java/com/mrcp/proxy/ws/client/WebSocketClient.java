@@ -75,7 +75,7 @@ public class WebSocketClient {
         handler = new WebSocketClientHandler(name, handshaker, this.clientCallBack);
     }
 
-    public void connect() throws InterruptedException {
+    public void connect() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
@@ -101,13 +101,12 @@ public class WebSocketClient {
             Channel ch = b.connect(uri.getHost(), uri.getPort()).sync().channel();
             channel = ch;
 
-            // 等待握手完成
             handler.handshakeFuture().sync();
 
             log.info("{} WebSocket Client connected!", this.name);
         } catch (Exception e) {
-            e.printStackTrace();
             group.shutdownGracefully();
+            throw new Exception(name + " connect failed: " + uri, e);
         }
     }
 

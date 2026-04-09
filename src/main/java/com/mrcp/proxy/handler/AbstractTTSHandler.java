@@ -2,12 +2,16 @@ package com.mrcp.proxy.handler;
 
 
 import com.alibaba.fastjson.JSONObject;
+import com.mrcp.proxy.handler.status.TtsEvent;
+import com.mrcp.proxy.handler.status.TtsStateMachine;
+import com.mrcp.proxy.utils.MrcpTTSMessage;
 import com.mrcp.proxy.ws.client.ClientCallBack;
 import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -24,6 +28,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
     protected final String url;
     protected JSONObject event;
     protected WebSocketClient client;
+    protected final TtsStateMachine stateMachine = new TtsStateMachine();
 
     private final boolean audioSaveEnabled;
     private final String audioSaveDir;
@@ -40,9 +45,76 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
     @Override
     public void onServerText(JSONObject event) throws Exception {
         this.event = event;
-        this.client = this.getClient();
-        initAudioFile();
+        String name = event.getJSONObject("header").getString("name");
+
+        if ("StartSynthesis".equalsIgnoreCase(name)) {
+            if (!stateMachine.fire(TtsEvent.START_SYNTHESIS)) {
+                return;
+            }
+            try {
+                this.client = this.getClient();
+                initAudioFile();
+                client.connect();
+                String text = event.getJSONObject("payload").getString("text");
+                client.sendText(buildSynthesisRequest(text));
+                serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildTtsStartMessage(event)));
+                stateMachine.fire(TtsEvent.CLIENT_CONNECTED);
+            } catch (Exception e) {
+                log.error("TTS启动失败", e);
+                stateMachine.fire(TtsEvent.ERROR);
+                doClose();
+                serverChannel.writeAndFlush(new TextWebSocketFrame(
+                        MrcpTTSMessage.buildTaskFailedMessage(event, e.getMessage())));
+            }
+        }
     }
+
+    @Override
+    public void onClientText(Channel channel, String text) {
+        if (!isSynthesisComplete(text)) {
+            return;
+        }
+        if (!stateMachine.fire(TtsEvent.SYNTHESIS_COMPLETE)) {
+            return;
+        }
+        doClose();
+        serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildTtsCompleteMessage(event)));
+        serverChannel.close();
+    }
+
+    @Override
+    public void onClientBinary(Channel channel, ByteBuf msg) {
+        if (!stateMachine.fire(TtsEvent.RECEIVE_AUDIO)) {
+            return;
+        }
+        saveAudioData(msg);
+        ByteBuf byteBuf = Unpooled.directBuffer(msg.capacity());
+        byteBuf.writeBytes(msg);
+        serverChannel.writeAndFlush(new BinaryWebSocketFrame(byteBuf));
+    }
+
+    private void doClose() {
+        closeAudioFile();
+        if (client != null) {
+            client.close();
+        }
+    }
+
+    protected WebSocketClient getClient() throws Exception {
+        return new WebSocketClient("tts", new URI(url), this);
+    }
+
+    /**
+     * 构建发给TTS服务的合成请求报文，由子类实现。
+     */
+    protected abstract String buildSynthesisRequest(String text);
+
+    /**
+     * 判断TTS服务返回的文本消息是否表示合成结束，由子类实现。
+     */
+    protected abstract boolean isSynthesisComplete(String text);
+
+    // ---- 音频保存 ----
 
     private void initAudioFile() {
         if (!audioSaveEnabled) {
@@ -65,22 +137,6 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
         }
     }
 
-    protected WebSocketClient getClient() throws Exception {
-        return new WebSocketClient("tts", new URI(url), this);
-    }
-
-    public abstract void onClientText(Channel channel, String text);
-
-    @Override
-    public void onClientBinary(Channel channel, ByteBuf msg){
-//        log.info("tts音频数据 -> 转发给 mrcp server");
-        saveAudioData(msg);
-
-        ByteBuf byteBuf = Unpooled.directBuffer(msg.capacity());
-        byteBuf.writeBytes(msg);
-        serverChannel.writeAndFlush(new BinaryWebSocketFrame(byteBuf));
-    }
-
     private void saveAudioData(ByteBuf buf) {
         if (audioOutputStream == null) {
             return;
@@ -94,7 +150,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
         }
     }
 
-    protected void closeAudioFile() {
+    private void closeAudioFile() {
         if (audioOutputStream != null) {
             try {
                 audioOutputStream.flush();
