@@ -70,7 +70,7 @@ public class NettyServer {
     private static final AttributeKey<WebSocketServerHandshaker> WS_HANDSHAKER =
             AttributeKey.valueOf("ws_server_handshaker");
     private static final AttributeKey<String> ASR_SESSION_ID = AttributeKey.valueOf("asr_session_id");
-    private static final ThreadPoolExecutor pool = ThreadPoolCreator.create(10, "netty-biz-", 3600, 1000);
+    private static final ThreadPoolExecutor pool = ThreadPoolCreator.create(20, "netty-biz-", 3600, 1000);
     @PostConstruct
     public void init(){
         log.info("start server ...");
