@@ -350,7 +350,7 @@ public class NettyServer {
         if ("SpeechSynthesizer".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
-                    TTSHandler ttsHandler = new IndexTTSHandler(ctx.channel(), config.getTtsUrl());
+                    TTSHandler ttsHandler = new IndexTTSHandler(ctx.channel(), config);
                     ttsHandler.onServerText(body);
                 } catch (Exception e) {
                     log.error("tts handle error: {}", e);
@@ -396,7 +396,7 @@ public class NettyServer {
                 try {
                     String sessionId = body.getJSONObject("context").getString("session_id");
                     ctx.channel().attr(ASR_SESSION_ID).set(sessionId);
-                    AsrHandler asrHandler = new FunasrHandler(ctx.channel(), config.getAsrUrl());
+                    AsrHandler asrHandler = new FunasrHandler(ctx.channel(), config);
                     asrHandler.onServerText(body);
                     AsrHandlerManager.put(sessionId, asrHandler);
                 } catch (Exception e) {

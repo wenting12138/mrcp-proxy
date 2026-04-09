@@ -17,4 +17,12 @@ public class NettyConfig {
 
     private String asrUrl;
 
+    private boolean asrAudioSaveEnabled = false;
+
+    private String asrAudioSaveDir = "audio/asr";
+
+    private boolean ttsAudioSaveEnabled = false;
+
+    private String ttsAudioSaveDir = "audio/tts";
+
 }

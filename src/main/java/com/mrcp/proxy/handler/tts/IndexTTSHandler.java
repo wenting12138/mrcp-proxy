@@ -3,6 +3,7 @@ package com.mrcp.proxy.handler.tts;
 import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.AbstractTTSHandler;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
+import com.mrcp.proxy.ws.NettyConfig;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class IndexTTSHandler extends AbstractTTSHandler {
 
-    public IndexTTSHandler(Channel serverChannel, String url) {
-        super(serverChannel, url);
+    public IndexTTSHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
+        super(serverChannel, url, audioSaveEnabled, audioSaveDir);
+    }
+
+    public IndexTTSHandler(Channel serverChannel, NettyConfig config) {
+        super(serverChannel, config.getTtsUrl(), config.isTtsAudioSaveEnabled(), config.getTtsAudioSaveDir());
     }
 
     @Override
@@ -30,6 +35,7 @@ public class IndexTTSHandler extends AbstractTTSHandler {
     @Override
     public void onClientText(Channel channel, String text) {
         if ("EOS".equals(text)) {
+            closeAudioFile();
             client.close();
             serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildTtsCompleteMessage(event)));
             serverChannel.close();

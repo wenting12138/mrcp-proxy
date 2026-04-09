@@ -3,6 +3,7 @@ package com.mrcp.proxy.handler.asr;
 import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.AbstractAsrHandler;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
+import com.mrcp.proxy.ws.NettyConfig;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import lombok.extern.slf4j.Slf4j;
@@ -10,8 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class FunasrHandler extends AbstractAsrHandler {
 
-    public FunasrHandler(Channel serverChannel, String url) {
-        super(serverChannel, url);
+    public FunasrHandler(Channel serverChannel, String url, boolean audioSaveEnabled, String audioSaveDir) {
+        super(serverChannel, url, audioSaveEnabled, audioSaveDir);
+    }
+
+    public FunasrHandler(Channel serverChannel, NettyConfig config) {
+        super(serverChannel, config.getAsrUrl(), config.isAsrAudioSaveEnabled(), config.getAsrAudioSaveDir());
     }
 
     @Override
