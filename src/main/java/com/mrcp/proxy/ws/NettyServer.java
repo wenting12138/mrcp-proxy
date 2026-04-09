@@ -30,6 +30,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -52,8 +53,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -66,7 +67,8 @@ public class NettyServer {
     private ServerBootstrap bootstrap;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
-    public static Map<String,WebSocketServerHandshaker> handShakerMap = new ConcurrentHashMap<String, WebSocketServerHandshaker>();
+    private static final AttributeKey<WebSocketServerHandshaker> WS_HANDSHAKER =
+            AttributeKey.valueOf("ws_server_handshaker");
     private static final AttributeKey<String> ASR_SESSION_ID = AttributeKey.valueOf("asr_session_id");
     private static final ThreadPoolExecutor pool = ThreadPoolCreator.create(10, "netty-biz-", 3600, 1000);
     @PostConstruct
@@ -243,14 +245,12 @@ public class NettyServer {
                     new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST));
             return;
         }
-        WebSocketServerHandshaker handshaker = handShakerMap.get(ctx.channel().id().asLongText());
+        WebSocketServerHandshaker handshaker = ctx.channel().attr(WS_HANDSHAKER).get();
         if (handshaker == null) {
-            String wsuri = "ws://127.0.0.1:1081"  + req.uri();
-            WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsuri, null, true);
+            String wsUri = buildWebSocketLocation(ctx, req);
+            WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(wsUri, null, true);
             handshaker = wsFactory.newHandshaker(req);
-            handShakerMap.put(ctx.channel().id().asLongText(), handshaker);
-            // 在这里处理用户登录;
-//            handleQueryParams(ctx, req.uri());
+            ctx.channel().attr(WS_HANDSHAKER).set(handshaker);
         }
         if (handshaker == null) {
             // 不支持
@@ -260,21 +260,28 @@ public class NettyServer {
         }
     }
 
-    private void handleQueryParams(ChannelHandlerContext ctx, String requestURI) {
-        String queryString = requestURI;
-        if (!queryString.contains("?")) {
-            queryString = "";
-        } else {
-            String[] tmpArray = queryString.split("\\?");
-            if (tmpArray.length == 2) {
-                queryString = tmpArray[1];
+    /**
+     * WebSocket 握手里的 location 需与客户端访问地址一致；优先 HTTP Host，否则用本地监听地址 + 配置端口。
+     */
+    private String buildWebSocketLocation(ChannelHandlerContext ctx, FullHttpRequest req) {
+        String host = req.headers().get(HttpHeaderNames.HOST);
+        if (host == null || host.isEmpty()) {
+            int port = config.getPort() != null ? config.getPort() : 80;
+            InetSocketAddress local = (InetSocketAddress) ctx.channel().localAddress();
+            if (local != null && local.getPort() > 0) {
+                port = local.getPort();
             }
+            String ip = "127.0.0.1";
+            if (local != null && local.getAddress() != null) {
+                String a = local.getAddress().getHostAddress();
+                if (a != null && !a.isEmpty() && !"0.0.0.0".equals(a) && !"::".equals(a)) {
+                    ip = a;
+                }
+            }
+            host = ip + ":" + port;
         }
-        Map<String, String> params = UriUtil.processRequestParameter(queryString);
-        System.out.println(params);
+        return "ws://" + host + req.uri();
     }
-
-
 
     /**
      *  收到二进制消息
