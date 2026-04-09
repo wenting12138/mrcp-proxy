@@ -2,6 +2,7 @@ package com.mrcp.proxy.handler.asr;
 
 import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.AbstractAsrHandler;
+import com.mrcp.proxy.ws.AsrConfig;
 import com.mrcp.proxy.ws.NettyConfig;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BaiduasrHandler extends AbstractAsrHandler {
 
-    public BaiduasrHandler(Channel serverChannel, NettyConfig config) {
+    public BaiduasrHandler(Channel serverChannel, AsrConfig config) {
         super(serverChannel, config);
     }
 
