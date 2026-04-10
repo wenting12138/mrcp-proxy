@@ -23,6 +23,7 @@ public class AsrHandlerFactory {
     public AsrHandlerFactory(AsrConfig asrConfig) {
         this.asrConfig = asrConfig;
         register("funasr", FunasrHandler::new);
+        register("aliasr", AliAsrHandler::new);
     }
 
     public void register(String name, BiFunction<Channel, AsrConfig, AsrHandler> creator) {

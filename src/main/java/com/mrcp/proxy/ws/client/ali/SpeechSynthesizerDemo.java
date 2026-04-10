@@ -92,11 +92,11 @@ public class SpeechSynthesizerDemo {
 
                 JSONObject req = new JSONObject();
                 req.put("text", "欢迎使用阿里巴巴智能语音合成服务，您可以说北京明天天气怎么样啊");
-                req.put("format", "wav");
-                req.put("sampleRate", 16000);
-                req.put("voice", "siyue");
-                req.put("pitchRate", 100);
-                req.put("speechRate", 100);
+                req.put("format", "pcm");
+                req.put("sampleRate", 8000);
+                req.put("voice", "aixia");
+                req.put("pitchRate", 0);
+                req.put("speechRate", 0);
                 req.put("enable_subtitle", false);
 
                 client.sendText(req.toJSONString());

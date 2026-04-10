@@ -23,6 +23,7 @@ public class TtsHandlerFactory {
     public TtsHandlerFactory(TtsConfig ttsConfig) {
         this.ttsConfig = ttsConfig;
         register("indextts", IndexTTSHandler::new);
+        register("alitts", AliTtsHandler::new);
     }
 
     public void register(String name, BiFunction<Channel, TtsConfig, TTSHandler> creator) {
