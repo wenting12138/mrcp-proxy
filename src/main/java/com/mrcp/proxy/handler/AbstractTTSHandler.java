@@ -25,7 +25,6 @@ import java.util.Date;
 
 @Slf4j
 public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
-    protected static final String HANDLER_TYPE = "tts";
     protected final Channel serverChannel;
     protected final String url;
     protected SynthesisMessage event;

@@ -78,6 +78,7 @@ public class NettyServer {
     private static final AttributeKey<WebSocketServerHandshaker> WS_HANDSHAKER =
             AttributeKey.valueOf("ws_server_handshaker");
     private static final AttributeKey<String> ASR_SESSION_ID = AttributeKey.valueOf("asr_session_id");
+    private static final AttributeKey<String> CHANNEL_TYPE = AttributeKey.valueOf("channel_type");
     private static final ThreadPoolExecutor pool = ThreadPoolCreator.create(20, "netty-biz-", 3600, 1000);
     @PostConstruct
     public void init(){
@@ -179,11 +180,11 @@ public class NettyServer {
     }
 
     private void channelException(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("server channel error: {}", cause.getMessage());
+        log.error("{} server channel error: {}", ctx.channel().attr(CHANNEL_TYPE).get(), cause.getMessage());
     }
 
     private void channelClose(ChannelHandlerContext ctx) throws Exception {
-        log.info("server channel close: {}", ctx.channel().id());
+        log.info("{} server channel close: {}", ctx.channel().attr(CHANNEL_TYPE).get(), ctx.channel().id());
         Object sessionIdObj = ctx.channel().attr(ASR_SESSION_ID).get();
         if (sessionIdObj == null) {
             return;
@@ -323,6 +324,7 @@ public class NettyServer {
         if ("SpeechSynthesizer".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
+                    ctx.channel().attr(CHANNEL_TYPE).set(TTSHandler.HANDLER_TYPE);
                     TTSHandler ttsHandler = ttsHandlerFactory.create(ctx.channel());
                     SynthesisMessage synthesisMessage = SynthesisMessage.parse(msg);
                     ttsHandler.onServerText(synthesisMessage);
@@ -334,6 +336,7 @@ public class NettyServer {
         if ("SpeechTranscriber".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
+                    ctx.channel().attr(CHANNEL_TYPE).set(AsrHandler.HANDLER_TYPE);
                     String name = messageHeader.getName();
                     String sessionId = messageContext.getSessionId();
                     TranscriptionMessage transcriptionMessage = TranscriptionMessage.parse(msg);

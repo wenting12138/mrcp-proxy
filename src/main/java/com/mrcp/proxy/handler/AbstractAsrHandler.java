@@ -23,7 +23,6 @@ import java.util.Date;
 
 @Slf4j
 public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
-    protected static final String HANDLER_TYPE = "asr";
     protected final Channel serverChannel;
     protected final String url;
     protected TranscriptionMessage event;
