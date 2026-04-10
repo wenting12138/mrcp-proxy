@@ -120,6 +120,12 @@
 			<artifactId>okhttp</artifactId>
 		</dependency>
 
+		<dependency>
+		    <groupId>com.alibaba.nls</groupId>
+		    <artifactId>nls-sdk-tts</artifactId>
+			<version>2.1.9</version>
+		</dependency>
+
   </dependencies>
     <build>
         <!-- 配置将哪些资源文件(静态文件/模板文件/mapper文件)加载到tomcat输出目录里 -->

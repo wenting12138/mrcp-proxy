@@ -7,6 +7,7 @@ import com.mrcp.proxy.handler.status.TtsStateMachine;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
 import com.mrcp.proxy.ws.TtsConfig;
 import com.mrcp.proxy.ws.client.ClientCallBack;
+import com.mrcp.proxy.ws.client.netty.NettyWebSocketClient;
 import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -55,7 +56,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
             try {
                 this.client = this.getClient();
                 initAudioFile();
-                client.connect();
+                client.connect(url);
                 String text = event.getJSONObject("payload").getString("text");
                 client.sendText(buildSynthesisRequest(text));
                 serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildTtsStartMessage(event)));
@@ -71,7 +72,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
     }
 
     @Override
-    public void onClientText(Channel channel, String text) {
+    public void onClientText(String text) {
         if (!isSynthesisComplete(text)) {
             return;
         }
@@ -84,7 +85,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
     }
 
     @Override
-    public void onClientBinary(Channel channel, ByteBuf msg) {
+    public void onClientBinary(ByteBuf msg) {
         if (!stateMachine.fire(TtsEvent.RECEIVE_AUDIO)) {
             return;
         }
@@ -101,8 +102,9 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
         }
     }
 
+    // 默认使用NettyWebSocketClient
     protected WebSocketClient getClient() throws Exception {
-        return new WebSocketClient("tts", new URI(url), this);
+        return new NettyWebSocketClient("tts", this);
     }
 
     /**

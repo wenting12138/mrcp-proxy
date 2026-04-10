@@ -7,6 +7,7 @@ import com.mrcp.proxy.handler.status.AsrStateMachine;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
 import com.mrcp.proxy.ws.AsrConfig;
 import com.mrcp.proxy.ws.client.ClientCallBack;
+import com.mrcp.proxy.ws.client.netty.NettyWebSocketClient;
 import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -17,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -54,7 +54,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
             try {
                 this.client = this.getClient();
                 initAudioFile();
-                client.connect();
+                client.connect(url);
                 String sessionId = event.getJSONObject("context").getString("session_id");
                 client.sendText(buildConnectRequest(sessionId));
                 serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildAsrStartMessage(event)));
@@ -86,7 +86,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     }
 
     @Override
-    public void onClientText(Channel channel, String text) {
+    public void onClientText(String text) {
         if (!stateMachine.fire(AsrEvent.CLIENT_RESULT)) {
             return;
         }
@@ -105,7 +105,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     }
 
     @Override
-    public void onClientBinary(Channel channel, ByteBuf buf) {
+    public void onClientBinary(ByteBuf buf) {
     }
 
     @Override
@@ -124,7 +124,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     }
 
     protected WebSocketClient getClient() throws Exception {
-        return new WebSocketClient("asr", new URI(url), this);
+        return new NettyWebSocketClient("asr", this);
     }
 
     public AsrState getState() {

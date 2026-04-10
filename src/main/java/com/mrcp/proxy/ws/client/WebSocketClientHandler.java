@@ -15,15 +15,15 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
-    private final String name;
+    private final String type;
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;
     private final ClientCallBack clientCallBack;
 
-    public WebSocketClientHandler(String name, WebSocketClientHandshaker handshaker, ClientCallBack clientCallBack) {
+    public WebSocketClientHandler(String type, WebSocketClientHandshaker handshaker, ClientCallBack clientCallBack) {
         this.handshaker = handshaker;
         this.clientCallBack = clientCallBack;
-        this.name = name;
+        this.type = type;
     }
 
     public ChannelFuture handshakeFuture() {
@@ -37,7 +37,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        log.info("{} WebSocket Client disconnected!", this.name);
+        log.info("{} WebSocket Client disconnected!", this.type);
     }
 
     @Override
@@ -46,10 +46,10 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         if (!handshaker.isHandshakeComplete()) {
             try {
                 handshaker.finishHandshake(ch, (FullHttpResponse) msg);
-                log.info("{} WebSocket Client handshake success!", this.name);
+                log.info("{} WebSocket Client handshake success!", this.type);
                 handshakeFuture.setSuccess();
             } catch (WebSocketHandshakeException e) {
-                log.info("{} WebSocket Client handshake failed!", this.name);
+                log.info("{} WebSocket Client handshake failed!", this.type);
                 handshakeFuture.setFailure(e);
             }
             return;
@@ -64,15 +64,15 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         WebSocketFrame frame = (WebSocketFrame) msg;
         if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-            log.info("{} Received Text: {}", this.name, textFrame.text());
+            log.info("{} Received Text: {}", this.type, textFrame.text());
             if (clientCallBack != null) {
-                clientCallBack.onClientText(ch, textFrame.text());
+                clientCallBack.onClientText(textFrame.text());
             }
         }
         if (frame instanceof BinaryWebSocketFrame) {
-            log.info("{} Received Binary frame of size: {}", this.name, frame.content().readableBytes());
+            log.info("{} Received Binary frame of size: {}", this.type, frame.content().readableBytes());
             if (clientCallBack != null) {
-                clientCallBack.onClientBinary(ch, frame.content());
+                clientCallBack.onClientBinary(frame.content());
             }
         }
     }
