@@ -1,9 +1,9 @@
 package com.mrcp.proxy.handler;
 
-import com.alibaba.fastjson.JSONObject;
+import com.mrcp.proxy.protocol.SynthesisMessage;
 
 public interface TTSHandler {
 
-    void onServerText(JSONObject event) throws Exception;
+    void onServerText(SynthesisMessage event) throws Exception;
 
 }

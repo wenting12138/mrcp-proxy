@@ -1,9 +1,9 @@
 package com.mrcp.proxy.handler;
 
 
-import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.status.TtsEvent;
 import com.mrcp.proxy.handler.status.TtsStateMachine;
+import com.mrcp.proxy.protocol.SynthesisMessage;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
 import com.mrcp.proxy.ws.TtsConfig;
 import com.mrcp.proxy.ws.client.ClientCallBack;
@@ -25,10 +25,10 @@ import java.util.Date;
 
 @Slf4j
 public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
-
+    protected static final String HANDLER_TYPE = "tts";
     protected final Channel serverChannel;
     protected final String url;
-    protected JSONObject event;
+    protected SynthesisMessage event;
     protected WebSocketClient client;
     protected final TtsStateMachine stateMachine = new TtsStateMachine();
 
@@ -45,10 +45,10 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
     }
 
     @Override
-    public void onServerText(JSONObject event) throws Exception {
+    public void onServerText(SynthesisMessage event) throws Exception {
         this.event = event;
-        String name = event.getJSONObject("header").getString("name");
-
+        String name = event.getHeader().getName();
+        log.info("收到tts消息: {}", event.getPayload().getText());
         if ("StartSynthesis".equalsIgnoreCase(name)) {
             if (!stateMachine.fire(TtsEvent.START_SYNTHESIS)) {
                 return;
@@ -57,7 +57,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
                 this.client = this.getClient();
                 initAudioFile();
                 client.connect(url);
-                String text = event.getJSONObject("payload").getString("text");
+                String text = event.getPayload().getText();
                 client.sendText(buildSynthesisRequest(text));
                 serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildTtsStartMessage(event)));
                 stateMachine.fire(TtsEvent.CLIENT_CONNECTED);
@@ -66,7 +66,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
                 stateMachine.fire(TtsEvent.ERROR);
                 doClose();
                 serverChannel.writeAndFlush(new TextWebSocketFrame(
-                        MrcpTTSMessage.buildTaskFailedMessage(event, e.getMessage())));
+                        MrcpTTSMessage.buildTtsTaskFailedMessage(event, e.getMessage())));
             }
         }
     }
@@ -104,7 +104,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
 
     // 默认使用NettyWebSocketClient
     protected WebSocketClient getClient() throws Exception {
-        return new NettyWebSocketClient("tts", this);
+        return new NettyWebSocketClient(HANDLER_TYPE, this);
     }
 
     /**
@@ -129,7 +129,7 @@ public abstract class AbstractTTSHandler implements TTSHandler, ClientCallBack {
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String taskId = event.getJSONObject("header").getString("task_id");
+            String taskId = event.getHeader().getTaskId();
             String timestamp = new SimpleDateFormat("HHmmss").format(new Date());
             String fileName = taskId + "_" + timestamp + ".pcm";
             audioFilePath = dir.getPath() + File.separator + fileName;

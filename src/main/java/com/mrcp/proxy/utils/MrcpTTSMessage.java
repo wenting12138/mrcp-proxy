@@ -2,18 +2,20 @@ package com.mrcp.proxy.utils;
 
 import cn.hutool.core.lang.UUID;
 import com.alibaba.fastjson.JSONObject;
+import com.mrcp.proxy.protocol.SynthesisMessage;
+import com.mrcp.proxy.protocol.TranscriptionMessage;
 
 public class MrcpTTSMessage {
     /**
      * @param fromEvent
      * @return
      */
-    public static String buildTtsStartMessage(JSONObject fromEvent){
+    public static String buildTtsStartMessage(SynthesisMessage fromEvent){
         JSONObject message = new JSONObject();
         JSONObject header = new JSONObject();
-        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("namespace", fromEvent.getHeader().getNamespace());
         header.put("name", "SynthesisStarted");
-        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("task_id", fromEvent.getHeader().getTaskId());
         header.put("message_id", UUID.fastUUID().toString());
         header.put("status", 20000000);
         header.put("status_text", "GATEWAY|SUCCESS|Success.");
@@ -21,12 +23,12 @@ public class MrcpTTSMessage {
         return message.toJSONString();
     }
 
-    public static String buildTtsCompleteMessage(JSONObject fromEvent){
+    public static String buildTtsCompleteMessage(SynthesisMessage fromEvent){
         JSONObject message = new JSONObject();
         JSONObject header = new JSONObject();
-        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("namespace", fromEvent.getHeader().getNamespace());
         header.put("name", "SynthesisCompleted");
-        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("task_id", fromEvent.getHeader().getTaskId());
         header.put("message_id", UUID.fastUUID().toString());
         header.put("status", 20000000);
         header.put("status_text", "GATEWAY|SUCCESS|Success.");
@@ -48,12 +50,12 @@ public class MrcpTTSMessage {
      * @param fromEvent
      * @return
      */
-    public static String buildAsrStartMessage(JSONObject fromEvent){
+    public static String buildAsrStartMessage(TranscriptionMessage fromEvent){
         JSONObject message = new JSONObject();
         JSONObject header = new JSONObject();
-        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("namespace", fromEvent.getHeader().getNamespace());
         header.put("name", "TranscriptionStarted");
-        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("task_id", fromEvent.getHeader().getTaskId());
         header.put("message_id", UUID.fastUUID().toString());
         header.put("status", 20000000);
         header.put("status_text", "GATEWAY|SUCCESS|Success.");
@@ -88,12 +90,12 @@ public class MrcpTTSMessage {
      * @param text
      * @return
      */
-    public static String buildAsrResultChangedMessage(JSONObject fromEvent, String text){
+    public static String buildAsrResultChangedMessage(TranscriptionMessage fromEvent, String text){
         JSONObject message = new JSONObject();
         JSONObject header = new JSONObject();
-        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("namespace", fromEvent.getHeader().getNamespace());
         header.put("name", "TranscriptionResultChanged");
-        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("task_id", fromEvent.getHeader().getTaskId());
         header.put("message_id", UUID.fastUUID().toString());
         header.put("status", 20000000);
         header.put("status_text", "GATEWAY|SUCCESS|Success.");
@@ -151,12 +153,12 @@ public class MrcpTTSMessage {
      * @param text
      * @return
      */
-    public static String buildAsrResultMessage(JSONObject fromEvent, String text) {
+    public static String buildAsrResultMessage(TranscriptionMessage fromEvent, String text) {
         JSONObject message = new JSONObject();
         JSONObject header = new JSONObject();
-        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("namespace", fromEvent.getHeader().getNamespace());
         header.put("name", "SentenceEnd");
-        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("task_id", fromEvent.getHeader().getTaskId());
         header.put("message_id", UUID.fastUUID().toString());
         header.put("status", 20000000);
         header.put("status_text", "GATEWAY|SUCCESS|Success.");
@@ -171,12 +173,25 @@ public class MrcpTTSMessage {
         return message.toJSONString();
     }
 
-    public static String buildTaskFailedMessage(JSONObject fromEvent, String reason) {
+    public static String buildTtsTaskFailedMessage(SynthesisMessage fromEvent, String reason) {
         JSONObject message = new JSONObject();
         JSONObject header = new JSONObject();
-        header.put("namespace", fromEvent.getJSONObject("header").getString("namespace"));
+        header.put("namespace", fromEvent.getHeader().getNamespace());
         header.put("name", "TaskFailed");
-        header.put("task_id", fromEvent.getJSONObject("header").getString("task_id"));
+        header.put("task_id", fromEvent.getHeader().getTaskId());
+        header.put("message_id", UUID.fastUUID().toString());
+        header.put("status", 40000000);
+        header.put("status_text", "GATEWAY|ERROR|" + reason);
+        message.put("header", header);
+        return message.toJSONString();
+    }
+
+    public static String buildAsrTaskFailedMessage(TranscriptionMessage fromEvent, String reason) {
+        JSONObject message = new JSONObject();
+        JSONObject header = new JSONObject();
+        header.put("namespace", fromEvent.getHeader().getNamespace());
+        header.put("name", "TaskFailed");
+        header.put("task_id", fromEvent.getHeader().getTaskId());
         header.put("message_id", UUID.fastUUID().toString());
         header.put("status", 40000000);
         header.put("status_text", "GATEWAY|ERROR|" + reason);

@@ -1,9 +1,9 @@
 package com.mrcp.proxy.handler;
 
-import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.status.AsrEvent;
 import com.mrcp.proxy.handler.status.AsrState;
 import com.mrcp.proxy.handler.status.AsrStateMachine;
+import com.mrcp.proxy.protocol.TranscriptionMessage;
 import com.mrcp.proxy.utils.MrcpTTSMessage;
 import com.mrcp.proxy.ws.AsrConfig;
 import com.mrcp.proxy.ws.client.ClientCallBack;
@@ -23,10 +23,10 @@ import java.util.Date;
 
 @Slf4j
 public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
-
+    protected static final String HANDLER_TYPE = "asr";
     protected final Channel serverChannel;
     protected final String url;
-    protected JSONObject event;
+    protected TranscriptionMessage event;
     protected WebSocketClient client;
     protected final AsrStateMachine stateMachine = new AsrStateMachine();
 
@@ -43,10 +43,10 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     }
 
     @Override
-    public void onServerText(JSONObject event) throws Exception {
+    public void onServerText(TranscriptionMessage event) throws Exception {
         this.event = event;
-        String name = event.getJSONObject("header").getString("name");
-
+        String name = event.getHeader().getName();
+        log.info("收到asr消息");
         if ("StartTranscription".equalsIgnoreCase(name)) {
             if (!stateMachine.fire(AsrEvent.START_TRANSCRIPTION)) {
                 return;
@@ -55,7 +55,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
                 this.client = this.getClient();
                 initAudioFile();
                 client.connect(url);
-                String sessionId = event.getJSONObject("context").getString("session_id");
+                String sessionId = event.getContext().getSessionId();
                 client.sendText(buildConnectRequest(sessionId));
                 serverChannel.writeAndFlush(new TextWebSocketFrame(MrcpTTSMessage.buildAsrStartMessage(event)));
                 stateMachine.fire(AsrEvent.CLIENT_CONNECTED);
@@ -64,7 +64,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
                 stateMachine.fire(AsrEvent.ERROR);
                 doClose();
                 serverChannel.writeAndFlush(new TextWebSocketFrame(
-                        MrcpTTSMessage.buildTaskFailedMessage(event, e.getMessage())));
+                        MrcpTTSMessage.buildAsrTaskFailedMessage(event, e.getMessage())));
             }
         } else if ("StopTranscription".equalsIgnoreCase(name)) {
             if (!stateMachine.fire(AsrEvent.STOP_TRANSCRIPTION)) {
@@ -124,7 +124,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
     }
 
     protected WebSocketClient getClient() throws Exception {
-        return new NettyWebSocketClient("asr", this);
+        return new NettyWebSocketClient(HANDLER_TYPE, this);
     }
 
     public AsrState getState() {
@@ -164,7 +164,7 @@ public abstract class AbstractAsrHandler implements AsrHandler, ClientCallBack {
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String sessionId = event.getJSONObject("context").getString("session_id");
+            String sessionId = event.getContext().getSessionId();
             String timestamp = new SimpleDateFormat("HHmmss").format(new Date());
             String fileName = sessionId + "_" + timestamp + ".pcm";
             audioFilePath = dir.getPath() + File.separator + fileName;

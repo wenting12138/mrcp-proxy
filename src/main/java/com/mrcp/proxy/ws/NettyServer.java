@@ -8,6 +8,10 @@ import com.mrcp.proxy.handler.AsrHandler;
 import com.mrcp.proxy.handler.TTSHandler;
 import com.mrcp.proxy.handler.asr.AsrHandlerFactory;
 import com.mrcp.proxy.handler.tts.TtsHandlerFactory;
+import com.mrcp.proxy.protocol.MessageContext;
+import com.mrcp.proxy.protocol.MessageHeader;
+import com.mrcp.proxy.protocol.SynthesisMessage;
+import com.mrcp.proxy.protocol.TranscriptionMessage;
 import com.mrcp.proxy.utils.NetworkUtil;
 import com.mrcp.proxy.utils.ThreadPoolCreator;
 import com.mrcp.proxy.utils.UriUtil;
@@ -311,104 +315,37 @@ public class NettyServer {
      * @param msg
      */
     private void processReceiveMsg(ChannelHandlerContext ctx, String msg) {
-        // 处理消息
-        log.info("收到消息: {}", msg);
-        /**
-         *  {
-         *     "context": {
-         *         "app": {
-         *             "developer": "beiyu",
-         *             "name": "sdm",
-         *             "version": "c7b489cc81f069b51c92c4b1f6fe403c56030851"
-         *         },
-         *         "sdk": {
-         *             "language": "C++",
-         *             "name": "nls-sdk-linux",
-         *             "version": "2.3.20"
-         *         }
-         *     },
-         *     "header": {
-         *         "appkey": "1111",
-         *         "message_id": "080434376305483c9e6a1c8bf67c41e9",
-         *         "name": "StartSynthesis",
-         *         "namespace": "SpeechSynthesizer",
-         *         "task_id": "aa0796fdfbef486aa7d9b8cb5f46a305"
-         *     },
-         *     "payload": {
-         *         "format": "pcm",
-         *         "method": 0,
-         *         "pitch_rate": 0,
-         *         "sample_rate": 8000,
-         *         "speech_rate": 0,
-         *         "text": "家长你好,这里是雁塔区长延堡社区卫生服务中心预防接种门诊,请您在孩子身体健康情况下,带预防接种证,尽>快前往雁塔区长延堡社区卫生服务中心,预防接种门诊接种。",
-         *         "voice": "aixia",
-         *         "volume": 50
-         *     }
-         * }
-         */
-        // 百度云报文
-        JSONObject body = JSON.parseObject(msg);
+        MessageHeader messageHeader = JSON.parseObject(msg).getJSONObject("header").toJavaObject(MessageHeader.class);
+        MessageContext messageContext = JSON.parseObject(msg).getJSONObject("context").toJavaObject(MessageContext.class);
 
         // SpeechSynthesizer
-        String namespace = body.getJSONObject("header").getString("namespace");
+        String namespace = messageHeader.getNamespace();
         if ("SpeechSynthesizer".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
                     TTSHandler ttsHandler = ttsHandlerFactory.create(ctx.channel());
-                    ttsHandler.onServerText(body);
+                    SynthesisMessage synthesisMessage = SynthesisMessage.parse(msg);
+                    ttsHandler.onServerText(synthesisMessage);
                 } catch (Exception e) {
                     log.error("tts handle error: {}", e);
                 }
             });
         }
-        /**
-         *  {
-         *     "context": {
-         *         "app": {
-         *             "developer": "beiyu",
-         *             "name": "sdm",
-         *             "version": "c7b489cc81f069b51c92c4b1f6fe403c56030851"
-         *         },
-         *         "sdk": {
-         *             "language": "C++",
-         *             "name": "nls-sdk-linux",
-         *             "version": "2.3.20"
-         *         },
-         *         "session_id": "37ead8eace174a5a"
-         *     },
-         *     "header": {
-         *         "appkey": "111111",
-         *         "message_id": "532a3964e6cc4a968867e41a290a0b91",
-         *         "name": "StartTranscription",
-         *         "namespace": "SpeechTranscriber",
-         *         "task_id": "9dc290a7410449c882185544bfece96b"
-         *     },
-         *     "payload": {
-         *         "enable_ignore_sentence_timeout": true,
-         *         "enable_intermediate_result": true,
-         *         "enable_inverse_text_normalization": true,
-         *         "enable_punctuation_prediction": true,
-         *         "enable_semantic_sentence_detection": false,
-         *         "format": "pcm",
-         *         "max_sentence_silence": 800,
-         *         "sample_rate": 8000
-         *     }
-         * }
-         */
         if ("SpeechTranscriber".equalsIgnoreCase(namespace)) {
             pool.execute(() -> {
                 try {
-                    String name = body.getJSONObject("header").getString("name");
-                    String sessionId = body.getJSONObject("context").getString("session_id");
+                    String name = messageHeader.getName();
+                    String sessionId = messageContext.getSessionId();
+                    TranscriptionMessage transcriptionMessage = TranscriptionMessage.parse(msg);
                     if ("StartTranscription".equalsIgnoreCase(name)) {
                         ctx.channel().attr(ASR_SESSION_ID).set(sessionId);
                         AsrHandler asrHandler = asrHandlerFactory.create(ctx.channel());
-                        asrHandler.onServerText(body);
+                        asrHandler.onServerText(transcriptionMessage);
                         AsrHandlerManager.put(sessionId, asrHandler);
                     } else {
                         AsrHandler asrHandler = AsrHandlerManager.get(sessionId);
                         if (asrHandler != null) {
-                            asrHandler.onServerText(body);
+                            asrHandler.onServerText(transcriptionMessage);
                         }
                     }
                 } catch (Exception e) {
