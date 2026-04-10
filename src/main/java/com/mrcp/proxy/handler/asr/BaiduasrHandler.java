@@ -3,7 +3,7 @@ package com.mrcp.proxy.handler.asr;
 import com.alibaba.fastjson.JSONObject;
 import com.mrcp.proxy.handler.AbstractAsrHandler;
 import com.mrcp.proxy.ws.AsrConfig;
-import com.mrcp.proxy.ws.NettyConfig;
+import com.mrcp.proxy.ws.client.WebSocketClient;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +19,11 @@ public class BaiduasrHandler extends AbstractAsrHandler {
         JSONObject req = new JSONObject();
 
         return req.toJSONString();
+    }
+
+    @Override
+    protected WebSocketClient getClient() throws Exception {
+        return super.getClient();
     }
 
     @Override
