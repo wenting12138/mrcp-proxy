@@ -1,8 +1,8 @@
 package com.mrcp.proxy.ws;
 
 
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mrcp.proxy.handler.AsrHandler;
 import com.mrcp.proxy.handler.TTSHandler;
@@ -14,7 +14,6 @@ import com.mrcp.proxy.protocol.SynthesisMessage;
 import com.mrcp.proxy.protocol.TranscriptionMessage;
 import com.mrcp.proxy.utils.NetworkUtil;
 import com.mrcp.proxy.utils.ThreadPoolCreator;
-import com.mrcp.proxy.utils.UriUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -200,6 +199,7 @@ public class NettyServer {
 
     private void channelConnection(ChannelHandlerContext ctx) throws Exception {
         log.info("server channel connect: {}", ctx.channel().id());
+        ctx.channel().attr(CHANNEL_TYPE).set("");
     }
 
     public class NettyServerHandler extends SimpleChannelInboundHandler<Object> {
@@ -316,6 +316,10 @@ public class NettyServer {
      * @param msg
      */
     private void processReceiveMsg(ChannelHandlerContext ctx, String msg) {
+        if (!JSONUtil.isTypeJSON(msg)) {
+            log.error("msg is not json: {}", msg);
+            return;
+        }
         MessageHeader messageHeader = JSON.parseObject(msg).getJSONObject("header").toJavaObject(MessageHeader.class);
         MessageContext messageContext = JSON.parseObject(msg).getJSONObject("context").toJavaObject(MessageContext.class);
 
