@@ -66,7 +66,7 @@ public class SynthesisMessage {
                 "        \"pitch_rate\": 0,\n" +
                 "        \"sample_rate\": 8000,\n" +
                 "        \"speech_rate\": 0,\n" +
-                "        \"text\": \"家长你好,这里是雁塔区长延堡社区卫生服务中心预防接种门诊,请您在孩子身体健康情况下,带预防接种证,尽>快前往雁塔区长延堡社区卫生服务中心,预防接种门诊接种。\",\n" +
+                "        \"text\": \"欢迎使用。\",\n" +
                 "        \"voice\": \"aixia\",\n" +
                 "        \"volume\": 50\n" +
                 "    }\n" +
